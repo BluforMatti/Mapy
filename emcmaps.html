@@ -1,0 +1,1319 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <title>Intelligence Map Viewer</title>
+  <!--
+  ===================================================================
+                    INTELLIGENCE MAP VIEWER - PŘEHLED
+  ===================================================================
+  
+  Toto je profesionální prohlížeč map s taktickým HUD stylem.
+  
+  RYCHLÝ NÁVOD PRO ÚPRAVY:
+  -------------------------
+  
+  📁 SOUBORY MAP:
+     - Řádek ~343: Upravte pole 'maps' pro přidání/odebrání souborů map
+     - Aktuální mapy: ['map1.png']
+     - Přidejte další názvy souborů jako 'mapa2.png', 'mapa3.png' atd.
+  
+  🎨 BARVY A TÉMA:
+     - Řádky 15-45: Hlavní barvy pozadí a mřížky
+     - Řádky 225-250: Barvy a styling HUD
+     - Hledejte "#4285f4" pro změnu modré barvy
+     - Hledejte "#0f1419" pro změnu tmavého pozadí
+  
+  🖼️ LOGO:
+     - Řádek ~375: Změňte 'transparentlogo.png' na váš soubor loga
+     - Řádek ~365: Upravte URL pozvánky na Discord
+     - Řádky 275-320: Styling a velikost kontejneru loga
+  
+  ☕ KO-FI:
+     - Řádek ~364: Změňte 'https://ko-fi.com/yourusername' na váš Ko-fi odkaz
+     - Řádek ~363: Změňte 'kofi-icon.png' na váš Ko-fi obrázek
+     - Řádky 285-315: Styling Ko-fi tlačítka v HUD
+  
+  📍 POI (BODY ZÁJMU):
+     - Řádek ~470: Upravte objekty 'mapPOIs' pro přidání/odebrání POI
+     - Každý POI má: název, popis, souřadnice (x, y), obrázek
+     - POI se zobrazují jako bílé tečky s hover efektem
+     - Hover zobrazí tooltip s obrázkem a informacemi
+  
+  📍 POZICOVÁNÍ:
+     - Řádky 135-180: Pozice voliče map (aktuálně nad HUD)
+     - Řádky 70-100: Pozice posuvníku zoomu (pravá strana)
+     - Řádky 225-250: Pozice HUD (spodní lišta)
+     - Řádky 275-285: Pozice loga (vpravo nahoře)
+  
+  ⚙️ NASTAVENÍ ZOOMU:
+     - Řádek 326: Hodnoty min/max posuvníku (min="20" max="200")
+     - Řádek 340: Základní minimální hodnota zoomu
+     - Logika zoomu je v JavaScriptu (řádky 450+)
+  
+  🎯 NÁZEV MAPY:
+     - Řádek 430: Logika formátování názvu mapy
+     - Aktuálně automaticky odebírá čísla a příponu .png
+  
+  📱 RESPONZIVNÍ:
+     - Většina prvků používá fixní pozicování pro taktický HUD pocit
+     - Kontejner se automaticky přizpůsobuje výšce viewportu
+  
+  HLAVNÍ SEKCE:
+  -------------
+  1. Řádky 8-320:   CSS Styling (barvy, layout, HUD, logo)
+  2. Řádky 325-350: HTML Struktura (volič map, logo, HUD)
+  3. Řádky 355-600: JavaScript Logika (zoom, tažení, načítání map)
+  
+  ===================================================================
+  -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    body {
+      margin: 0;
+      background: #0f1419;
+      color: #e8eaed;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      position: relative;
+      /* Disable right-click context menu globally */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      -khtml-user-select: none;
+      -moz-user-select: none;
+      -ms-user-select: none;
+    }
+
+    /* Subtle grid overlay - simplified */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    h1 {
+      padding: 20px 30px;
+      margin: 0;
+      margin-top: 50px;
+      user-select: none;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 16px;
+      letter-spacing: 0.5px;
+      color: #9aa0a6;
+      border-left: 3px solid #4285f4;
+      background: rgba(66, 133, 244, 0.05);
+    }
+
+    #container {
+      width: 100vw;
+      height: calc(100vh - 80px);
+      overflow: hidden;
+      position: relative;
+      cursor: grab;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      margin-top: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      /* Allow pointer events on container for interaction */
+      pointer-events: auto;
+    }
+
+    /* Invisible watermark overlay */
+    #container::after {
+      content: 'EUROPEAN MARINE CORPS';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: bold;
+      color: rgba(255, 255, 255, 0.03);
+      pointer-events: none;
+      z-index: 50;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    #map {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform-origin: center center;
+      transition: transform 0.05s ease-out;
+      max-width: none;
+      user-select: none;
+      border-radius: 4px;
+      pointer-events: none; /* Disable right-click and drag-to-save */
+      -webkit-user-drag: none; /* Disable dragging in WebKit browsers */
+      -khtml-user-drag: none;
+      -moz-user-drag: none;
+      -o-user-drag: none;
+      -webkit-touch-callout: none; /* Disable touch callout on mobile */
+    }
+
+    #slider-container {
+      position: fixed;
+      top: 50%;
+      right: 24px;
+      transform: translateY(-50%);
+      height: 200px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px 12px;
+    }
+
+    #slider-container::before {
+      content: 'ZOOM';
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      font-size: 10px;
+      color: #9aa0a6;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    #zoomSlider {
+      writing-mode: vertical-lr;
+      appearance: none;
+      -webkit-appearance: none;
+      width: 4px;
+      height: 160px;
+      background: linear-gradient(to top, rgba(66, 133, 244, 0.3) 0%, #4285f4 100%);
+      border-radius: 2px;
+      outline: none;
+      border: none;
+      transform: rotate(180deg);
+    }
+
+    #zoomSlider::-webkit-slider-thumb {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      background: #4285f4;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #1a1f2e;
+    }
+
+    #zoomSlider::-webkit-slider-thumb:hover {
+      background: #5c94f5;
+    }
+
+    #zoomSlider::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      background: #4285f4;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid #1a1f2e;
+    }
+
+    /* Elegant unified map selector */
+    #mapSelector {
+      position: fixed;
+      bottom: 80px;
+      left: 24px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+      font-size: 13px;
+      letter-spacing: 0.5px;
+      user-select: none;
+      z-index: 1001;
+      transition: all 0.3s ease;
+      backdrop-filter: blur(8px);
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 150px;
+    }
+
+    #mapSelector:hover {
+      background: rgba(66, 133, 244, 0.1);
+      border-color: rgba(66, 133, 244, 0.3);
+      transform: translateY(-2px);
+    }
+
+    #mapSelector.open {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 16px;
+      min-width: 200px;
+      gap: 8px;
+    }
+
+    #mapSelectorCurrent {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #e8eaed;
+    }
+
+    #mapSelectorCurrent::before {
+      content: '🗺️';
+      font-size: 14px;
+    }
+
+    #mapSelectorDropdown {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease;
+    }
+
+    #mapSelector.open #mapSelectorDropdown {
+      max-height: 300px;
+      margin-top: 8px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .mapOption {
+      padding: 8px 12px;
+      border-radius: 6px;
+      margin-bottom: 4px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: #9aa0a6;
+    }
+
+    .mapOption:hover {
+      background: rgba(66, 133, 244, 0.1);
+      color: #4285f4;
+    }
+
+    .mapOption.selected {
+      background: rgba(66, 133, 244, 0.2);
+      color: #4285f4;
+    }
+
+    .mapOption img {
+      width: 24px;
+      height: 24px;
+      border-radius: 4px;
+      opacity: 0.7;
+    }
+
+    .mapOption:hover img,
+    .mapOption.selected img {
+      opacity: 1;
+    }
+
+    /* Minimal HUD */
+    #tacticalHUD {
+      position: fixed;
+      bottom: 24px;
+      left: 24px;
+      right: 24px;
+      height: 44px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: #9aa0a6;
+    }
+
+    #coordinates, #zoomLevel, #status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 400;
+    }
+
+    /* Ko-fi button in HUD */
+    #kofiButton {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      background: rgba(255, 95, 95, 0.1);
+      border: 1px solid rgba(255, 95, 95, 0.2);
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+      color: #ff5f5f;
+      font-size: 11px;
+      font-weight: 500;
+    }
+
+    #kofiButton:hover {
+      background: rgba(255, 95, 95, 0.2);
+      border-color: rgba(255, 95, 95, 0.4);
+      transform: translateY(-1px);
+    }
+
+    #kofiButton img {
+      width: 16px;
+      height: 16px;
+      opacity: 0.8;
+    }
+
+    #kofiButton:hover img {
+      opacity: 1;
+    }
+
+    #coordinates::before {
+      content: 'POS:';
+      color: #4285f4;
+      font-weight: 500;
+    }
+
+    #zoomLevel::before {
+      content: 'SCALE:';
+      color: #4285f4;
+      font-weight: 500;
+    }
+
+    #status::before {
+      content: 'STATUS:';
+      color: #4285f4;
+      font-weight: 500;
+    }
+
+    /* Logo container */
+    #logoContainer {
+      position: fixed;
+      top: 20px;
+      right: 24px;
+      width: 120px;
+      height: 120px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1001;
+      transition: border-color 0.2s ease, transform 0.2s ease;
+      cursor: pointer;
+    }
+
+    #logoContainer:hover {
+      border-color: rgba(66, 133, 244, 0.3);
+      transform: scale(1.05);
+    }
+
+    #logoContainer img {
+      max-width: 200px;
+      max-height: 200px;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+    }
+
+    #logoContainer img:hover {
+      opacity: 1;
+    }
+
+    /* Placeholder for when no logo is loaded */
+    #logoContainer::before {
+      content: 'LOGO';
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: #4285f4;
+      font-weight: 500;
+      letter-spacing: 1px;
+      opacity: 0.5;
+    }
+
+    #logoContainer img {
+      display: none; /* Hidden by default until logo is loaded */
+    }
+
+    #logoContainer.has-logo::before {
+      display: none; /* Hide placeholder when logo is present */
+    }
+
+    #logoContainer.has-logo img {
+      display: block; /* Show logo when loaded */
+    }
+
+    /* POI (Points of Interest) Styling */
+    .poi {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid rgba(66, 133, 244, 0.8);
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      z-index: 100;
+      transform: translate(-50%, -50%);
+    }
+
+    .poi:hover {
+      background: #4285f4;
+      border-color: rgba(255, 255, 255, 0.9);
+      transform: translate(-50%, -50%) scale(1.5);
+      box-shadow: 0 0 12px rgba(66, 133, 244, 0.6);
+    }
+
+    .poi-tooltip {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      padding: 12px;
+      min-width: 200px;
+      max-width: 300px;
+      z-index: 1000;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s ease;
+      font-family: 'Inter', sans-serif;
+      backdrop-filter: blur(8px);
+    }
+
+    .poi-tooltip.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .poi-tooltip img {
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .poi-tooltip h3 {
+      margin: 0 0 4px 0;
+      color: #4285f4;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .poi-tooltip p {
+      margin: 0;
+      color: #9aa0a6;
+      font-size: 12px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div id="mapSelector">
+    <div id="mapSelectorCurrent">Select Map</div>
+    <div id="mapSelectorDropdown"></div>
+  </div>
+
+  <div id="logoContainer">
+    <img id="logo" alt="Agency Logo" />
+  </div>
+
+  <h1 id="mapTitle">Initializing secure connection...</h1>
+
+  <div id="container">
+    <img id="map" alt="Intelligence Map" />
+  </div>
+
+  <div id="slider-container">
+    <input
+      type="range"
+      id="zoomSlider"
+      min="20"
+      max="200"
+      value="75"
+      step="1"
+    />
+  </div>
+
+  <div id="tacticalHUD">
+    <div id="coordinates">0, 0</div>
+    <div id="zoomLevel">100%</div>
+    <div id="status">Standby</div>
+    <a id="kofiButton" href="https://ko-fi.com/matti12816" target="_blank">
+      <img src="kofi.png" alt="Ko-fi" />
+      <span>Support</span>
+    </a>
+  </div>
+
+  <script>
+    // ===================================================================
+    //                    OCHRANA PROTI STAHOVÁNÍ MAP
+    // ===================================================================
+    
+    // Detekce podezřelé aktivity (rychlé klávesy, automatizované chování)
+    let suspiciousActivity = 0;
+    let lastKeyTime = 0;
+    
+    function detectSuspiciousActivity() {
+      suspiciousActivity++;
+      if (suspiciousActivity > 10) {
+        console.log('Suspicious activity detected - possible automation');
+        // Můžete přidat redirect nebo jiné opatření
+        document.body.style.filter = 'blur(20px)';
+        setTimeout(() => {
+          document.body.style.filter = 'none';
+          suspiciousActivity = 0;
+        }, 5000);
+      }
+    }
+
+    // Zakázání pravého kliknutí (kontextového menu) na celé stránce
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+      return false;
+    }, false);
+    
+    // Zakázání F12 (Developer Tools) a dalších klávesových zkratek
+    document.addEventListener('keydown', function(e) {
+      const currentTime = Date.now();
+      // Detekce rychlého mačkání kláves (možný bot)
+      if (currentTime - lastKeyTime < 50) {
+        detectSuspiciousActivity();
+      }
+      lastKeyTime = currentTime;
+      
+      // F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U, Ctrl+Shift+C
+      if (e.keyCode === 123 || // F12
+          (e.ctrlKey && e.shiftKey && e.keyCode === 73) || // Ctrl+Shift+I
+          (e.ctrlKey && e.shiftKey && e.keyCode === 74) || // Ctrl+Shift+J
+          (e.ctrlKey && e.keyCode === 85) || // Ctrl+U (view source)
+          (e.ctrlKey && e.shiftKey && e.keyCode === 67) || // Ctrl+Shift+C
+          (e.ctrlKey && e.keyCode === 83) || // Ctrl+S (save page)
+          (e.key === 'F12') || // Alternative F12 detection
+          (e.ctrlKey && e.keyCode === 80)) { // Ctrl+P (print)
+        e.preventDefault();
+        detectSuspiciousActivity();
+        return false;
+      }
+    }, false);
+    
+    // Zakázání výběru textu a tažení obrázků
+    document.addEventListener('selectstart', function(e) {
+      e.preventDefault();
+      return false;
+    }, false);
+    
+    document.addEventListener('dragstart', function(e) {
+      e.preventDefault();
+      return false;
+    }, false);
+    
+    // Detekce otevření Developer Tools (nepřesné, ale částečně účinné)
+    let devtools = {open: false, orientation: null};
+    const threshold = 160;
+    
+    setInterval(() => {
+      if (window.outerHeight - window.innerHeight > threshold || 
+          window.outerWidth - window.innerWidth > threshold) {
+        if (!devtools.open) {
+          devtools.open = true;
+          // Můžete zde přidat redirect nebo jiné opatření
+          console.clear();
+          console.log('%cDeveloper tools detected!', 'color: red; font-size: 20px;');
+          // Blur obsah při otevření dev tools
+          document.body.style.filter = 'blur(10px)';
+          document.body.style.pointerEvents = 'none';
+        }
+      } else {
+        if (devtools.open) {
+          // Obnovení při zavření dev tools
+          document.body.style.filter = 'none';
+          document.body.style.pointerEvents = 'auto';
+        }
+        devtools.open = false;
+      }
+    }, 500);
+    
+    // Pravidelné mazání console
+    setInterval(() => {
+      console.clear();
+    }, 2000);
+    
+    // Ochrana proti print screen (částečná - nelze úplně zabránit)
+    document.addEventListener('keyup', function(e) {
+      if (e.keyCode === 44) { // Print Screen
+        console.log('Print screen detected');
+        // Dočasné skrytí obsahu
+        document.body.style.visibility = 'hidden';
+        setTimeout(() => {
+          document.body.style.visibility = 'visible';
+        }, 100);
+      }
+    }, false);
+
+    // Detekce tab visibility (při přepnutí do jiné aplikace pro screenshot)
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        // Stránka není viditelná - možný screenshot
+        console.log('Page hidden - potential screenshot attempt');
+        detectSuspiciousActivity();
+      }
+    });
+
+    // Online-specific protection: Referrer checking
+    if (document.referrer && !document.referrer.includes(window.location.hostname)) {
+      console.log('External referrer detected:', document.referrer);
+      // Můžete přidat kontrolu povolených domén
+    }
+
+    // Detekce automatizace (headless browsers, selenium)
+    function detectAutomation() {
+      // Kontrola typických znaků automatizace
+      if (navigator.webdriver || 
+          window.callPhantom || 
+          window._phantom || 
+          window.__selenium_unwrapped ||
+          window.__webdriver_evaluate ||
+          window.__webdriver_script_function) {
+        console.log('Automation detected');
+        document.body.style.display = 'none';
+        return true;
+      }
+      
+      // Kontrola neobvyklých vlastností
+      if (navigator.languages && navigator.languages.length === 0) {
+        console.log('Suspicious browser detected');
+        return true;
+      }
+      
+      return false;
+    }
+
+    // Spuštění detekce automatizace
+    if (detectAutomation()) {
+      document.body.innerHTML = '<h1>Access Denied</h1>';
+    }
+
+    const map = document.getElementById('map');
+    const container = document.getElementById('container');
+    const zoomSlider = document.getElementById('zoomSlider');
+    const mapSelector = document.getElementById('mapSelector');
+    const mapSelectorCurrent = document.getElementById('mapSelectorCurrent');
+    const mapSelectorDropdown = document.getElementById('mapSelectorDropdown');
+    const mapTitle = document.getElementById('mapTitle');
+
+    let scale = 1;
+    let pos = { x: 0, y: 0 };
+    let dragStart = { x: 0, y: 0 };
+    let isDragging = false;
+    let centeredAtMinZoom = true;
+    let currentMinZoom = 20; // Dynamic minimum zoom based on current image
+
+    const baseMinZoomValue = Number(zoomSlider.min); // 20 - base minimum
+    const maxZoomValue = Number(zoomSlider.max); // 200
+
+    // Seznam map
+    const maps = [
+      'map1.png'
+    ];
+
+    // Funkce pro obfuskaci názvu souboru (ztížení identifikace v network tabu)
+    // Zakóduje název souboru do Base64 a přidá náhodný timestamp
+    function obfuscateImagePath(imageName) {
+      const timestamp = Date.now();
+      const randomSeed = Math.random().toString(36).substring(7);
+      const encodedName = btoa(imageName); // Base64 encode
+      const userAgent = btoa(navigator.userAgent.substring(0, 20)); // Browser fingerprint
+      return `${imageName}?v=${encodedName}&t=${timestamp}&r=${randomSeed}&ua=${userAgent}&ref=${btoa(document.referrer || 'direct')}`;
+    }
+
+    // Funkce pro vytvoření "dummy" requestů (ztížení identifikace skutečných map)
+    function createDecoyRequests() {
+      const decoyNames = ['decoy1.png', 'decoy2.png', 'background.png', 'overlay.png', 'thumb.jpg', 'preview.png'];
+      decoyNames.forEach(name => {
+        const img = new Image();
+        img.style.display = 'none';
+        // Tyto requesty selžou, ale vytvoří "šum" v network tabu
+        img.src = name + '?decoy=' + Math.random() + '&fake=' + Date.now();
+        // Přidáme random delay pro realističtější "šum"
+        setTimeout(() => {
+          img.src = name + '?decoy2=' + Math.random();
+        }, Math.random() * 1000);
+      });
+    }
+
+    // Detekce podezřelé aktivity (rychlé klávesy, automatizované chování)
+    function detectSuspiciousActivity() {
+      suspiciousActivity++;
+      if (suspiciousActivity > 10) {
+        console.log('Suspicious activity detected - possible automation');
+        // Můžete přidat redirect nebo jiné opatření
+        document.body.style.filter = 'blur(20px)';
+        setTimeout(() => {
+          document.body.style.filter = 'none';
+          suspiciousActivity = 0;
+        }, 5000);
+      }
+    }
+
+    // POI data for each map
+    // Format: 'mapfilename.png': [ array of POI objects ]
+    // Each POI object has:
+    // - name: Název POI (zobrazí se v tooltip)
+    // - description: Popis POI (zobrazí se pod názvem)
+    // - x: Pozice X na obrázku v pixelech (měřeno zleva)
+    // - y: Pozice Y na obrázku v pixelech (měřeno shora)
+    // - image: Cesta k obrázku POI (zobrazí se v tooltip)
+    const mapPOIs = {
+      'map1.png': [
+        {
+          name: 'Východní věž',
+          description: 'Strategická pozorovací věž s výhledem na celé údolí.',
+          x: 300, // pozice X na obrázku (v pixelech) - 300px zleva
+          y: 150, // pozice Y na obrázku (v pixelech) - 150px shora
+          image: 'poi1.jpg' // obrázek POI - musí být ve stejné složce
+        },
+        {
+          name: 'Hlavní základna',
+          description: 'Velitelské centrum s komunikačním zařízením.',
+          x: 500, // 500px zleva
+          y: 400, // 400px shora
+          image: 'poi2.jpg'
+        },
+        {
+          name: 'Přistávací plocha',
+          description: 'Heliport pro rychlé nasazení a evakuaci.',
+          x: 200, // 200px zleva
+          y: 300, // 300px shora
+          image: 'poi3.jpg'
+        }
+        // Pro přidání dalšího POI zkopírujte jeden z objektů výše
+        // a změňte jeho hodnoty (nezapomeňte na čárku mezi objekty)
+      ]
+      // Pro přidání POI na další mapy přidejte nový klíč:
+      // 'nazev_mapy.png': [
+      //   { name: 'POI název', description: 'popis', x: 100, y: 200, image: 'obr.jpg' }
+      // ],
+    };
+
+    // HUD elementy
+    const coordinatesDisplay = document.getElementById('coordinates');
+    const zoomLevelDisplay = document.getElementById('zoomLevel');
+    const statusDisplay = document.getElementById('status');
+    const logoContainer = document.getElementById('logoContainer');
+    const logoImg = document.getElementById('logo');
+
+    // Logo functionality
+    function loadLogo(logoPath) {
+      if (logoPath) {
+        logoImg.src = logoPath;
+        logoImg.onload = () => {
+          logoContainer.classList.add('has-logo');
+        };
+        logoImg.onerror = () => {
+          logoContainer.classList.remove('has-logo');
+        };
+      }
+    }
+
+    // Discord invite functionality
+    logoContainer.addEventListener('click', () => {
+      // Replace 'YOUR_DISCORD_INVITE_CODE' with your actual Discord invite code
+      const discordInvite = 'https://discord.gg/cpcyqtVhen';
+      window.open(discordInvite, '_blank');
+    });
+
+    // Automatically load the transparentlogo.png
+    loadLogo('transparentlogo.png');
+
+    // POI management variables
+    // currentPOIs: Array obsahující všechny aktuálně zobrazené POI elementy
+    // activeTooltip: Reference na aktuálně zobrazený tooltip (nebo null)
+    let currentPOIs = [];
+    let activeTooltip = null;
+
+    // Funkce pro vytvoření jednoho POI bodu na mapě
+    // poiData: objekt s daty POI (name, description, x, y, image)
+    // Vrací: DOM element POI bodu
+    function createPOI(poiData) {
+      // Vytvoření DOM elementu pro POI bod (bílá tečka s modrým okrajem)
+      const poi = document.createElement('div');
+      poi.className = 'poi';
+      // Nastavení pozice POI na mapě (pozice jsou v pixelech relativně k obrázku)
+      poi.style.left = poiData.x + 'px';
+      poi.style.top = poiData.y + 'px';
+      
+      // Vytvoření tooltip elementu (popup s informacemi o POI)
+      const tooltip = document.createElement('div');
+      tooltip.className = 'poi-tooltip';
+      // Naplnění tooltip obsahem (obrázek, název, popis)
+      tooltip.innerHTML = `
+        <img src="${poiData.image}" alt="${poiData.name}" onerror="this.style.display='none';">
+        <h3>${poiData.name}</h3>
+        <p>${poiData.description}</p>
+      `;
+      
+      // Funkce pro aktualizaci pozice tooltip při pohybu myši
+      // e: mouse event obsahující pozici kurzoru
+      const updateTooltipPosition = (e) => {
+        // Získání pozice kontejneru mapy
+        const rect = container.getBoundingClientRect();
+        // Výpočet pozice tooltip relativně ke kontejneru (s offsetem)
+        const x = e.clientX - rect.left + 15; // 15px doprava od kurzoru
+        const y = e.clientY - rect.top - 10;  // 10px nahoru od kurzoru
+        
+        // Nastavení pozice tooltip
+        tooltip.style.left = x + 'px';
+        tooltip.style.top = y + 'px';
+        
+        // Kontrola, zda tooltip nevylézá z okna - pokud ano, přesuneme ho
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        
+        // Pokud tooltip vylézá doprava, posuneme ho doleva od kurzoru
+        if (tooltipRect.right > containerRect.right) {
+          tooltip.style.left = (x - tooltipRect.width - 30) + 'px';
+        }
+        // Pokud tooltip vylézá nahoru, posuneme ho dolů od kurzoru
+        if (tooltipRect.top < containerRect.top) {
+          tooltip.style.top = (y + 20) + 'px';
+        }
+      };
+      
+      // Event listener: když myš najede na POI bod
+      poi.addEventListener('mouseenter', (e) => {
+        // Pokud je už nějaký tooltip zobrazený, odstraníme ho
+        if (activeTooltip) {
+          activeTooltip.remove();
+        }
+        // Přidáme nový tooltip do kontejneru
+        container.appendChild(tooltip);
+        // Nastavíme pozici tooltip
+        updateTooltipPosition(e);
+        // Zobrazíme tooltip s malým zpožděním pro plynulou animaci
+        setTimeout(() => tooltip.classList.add('visible'), 10);
+        // Uložíme referenci na aktivní tooltip
+        activeTooltip = tooltip;
+      });
+      
+      // Event listener: když se myš pohybuje nad POI bodem
+      // (tooltip sleduje kurzor)
+      poi.addEventListener('mousemove', updateTooltipPosition);
+      
+      // Event listener: když myš opustí POI bod
+      poi.addEventListener('mouseleave', () => {
+        if (activeTooltip) {
+          // Skryjeme tooltip (odebereme CSS třídu 'visible')
+          activeTooltip.classList.remove('visible');
+          // Po dokončení animace tooltip úplně odstraníme
+          setTimeout(() => {
+            if (activeTooltip && activeTooltip.parentNode) {
+              activeTooltip.remove();
+            }
+            activeTooltip = null;
+          }, 200); // 200ms = doba animace skrytí
+        }
+      });
+      
+      // Vrátíme vytvořený POI element
+      return poi;
+    }
+
+    // Funkce pro načtení a zobrazení všech POI pro danou mapu
+    // mapName: název souboru mapy (např. 'map1.png')
+    function loadPOIs(mapName) {
+      // Odstranění všech aktuálně zobrazených POI z mapy
+      currentPOIs.forEach(poi => poi.remove());
+      currentPOIs = []; // Vyprázdnění pole
+      
+      // Odstranění případného aktivního tooltip
+      if (activeTooltip) {
+        activeTooltip.remove();
+        activeTooltip = null;
+      }
+      
+      // Načtení POI dat pro danou mapu (pokud existují)
+      const pois = mapPOIs[mapName] || []; // Pokud mapa nemá POI, použije se prázdné pole
+      
+      // Vytvoření a přidání každého POI na mapu
+      pois.forEach(poiData => {
+        const poi = createPOI(poiData); // Vytvoření POI elementu
+        map.appendChild(poi); // Přidání POI do mapy (jako dítě img elementu)
+        currentPOIs.push(poi); // Uložení reference pro pozdější odstranění
+      });
+    }
+
+    // Funkce pro aktualizaci HUD
+    function updateHUD() {
+      const x = Math.round(pos.x);
+      const y = Math.round(pos.y);
+      const zoomPercent = Math.round(scale * 100);
+      
+      coordinatesDisplay.textContent = `${x}, ${y}`;
+      zoomLevelDisplay.textContent = `${zoomPercent}%`;
+      
+      if (scale <= currentMinZoom / 100) {
+        statusDisplay.textContent = 'Overview';
+      } else if (scale >= 1.5) {
+        statusDisplay.textContent = 'Detail view';
+      } else {
+        statusDisplay.textContent = 'Active';
+      }
+    }
+
+    function calculateInitialScaleAndPosition() {
+      const containerRect = container.getBoundingClientRect();
+      const containerWidth = containerRect.width;
+      const containerHeight = containerRect.height;
+
+      const imgWidth = map.naturalWidth;
+      const imgHeight = map.naturalHeight;
+
+      if (imgWidth === 0 || imgHeight === 0) {
+        return { scale: 1, posX: 0, posY: 0 };
+      }
+
+      // Výpočet škálování tak, aby celý obrázek byl viditelný
+      const scaleX = containerWidth / imgWidth;
+      const scaleY = containerHeight / imgHeight;
+      const fitScale = Math.min(scaleX, scaleY);
+
+      // Použijeme scale který zajistí, že celý obrázek bude viditelný
+      const initialScale = fitScale;
+
+      // Pro centrování s naším transform systémem používáme pozici 0,0
+      return { scale: initialScale, posX: 0, posY: 0 };
+    }
+
+    // Funkce pro načtení mapy přímo (s obfuskací a ochranou)
+    function loadMap(name) {
+      centeredAtMinZoom = true;
+      
+      // Vytvoření decoy requestů pro ztížení identifikace
+      createDecoyRequests();
+      
+      // Obfuskace cesty k obrázku
+      const obfuscatedPath = obfuscateImagePath(name);
+      
+      map.src = obfuscatedPath;
+      map.onload = () => {
+        // Spočítáme počáteční scale a pozici
+        const { scale: initialScale, posX, posY } = calculateInitialScaleAndPosition();
+
+        scale = initialScale;
+        pos.x = posX;
+        pos.y = posY;
+
+        // Vypočteme a nastavíme nový minimální zoom pro tento obrázek
+        const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        const imgWidth = map.naturalWidth;
+        const imgHeight = map.naturalHeight;
+        
+        if (imgWidth > 0 && imgHeight > 0) {
+          const scaleX = containerWidth / imgWidth;
+          const scaleY = containerHeight / imgHeight;
+          const fitScale = Math.min(scaleX, scaleY);
+          // Nastavíme minimální zoom na větší z: base minimum (20) nebo fit-to-screen zoom
+          // Ale zajistíme, že není příliš malý (minimálně 10%)
+          const calculatedMinZoom = Math.max(baseMinZoomValue, Math.round(fitScale * 100));
+          currentMinZoom = Math.max(10, calculatedMinZoom);
+          
+          // Aktualizujeme slider minimum
+          zoomSlider.min = currentMinZoom;
+        } else {
+          currentMinZoom = baseMinZoomValue;
+          zoomSlider.min = baseMinZoomValue;
+        }
+
+        // Nastavíme slider podle scale (direct value since slider is not rotated)
+        let normalValue = Math.round(scale * 100);
+        // Zajistíme, že slider value není menší než jeho minimum
+        normalValue = Math.max(normalValue, currentMinZoom);
+        zoomSlider.value = normalValue;
+
+        updateTransform();
+        // Use the actual map filename (without extension) as the title
+        const mapName = name.replace('.png', '').replace(/\d+/g, ' $&').trim();
+        mapTitle.textContent = mapName;
+        updateSelectedThumb();
+        updateHUD();
+        
+        // DŮLEŽITÉ: Načtení POI pro tuto mapu
+        // Toto se volá pokaždé, když se načte nová mapa
+        // Automaticky odstraní staré POI a načte nové podle mapPOIs objektu
+        loadPOIs(name);
+      };
+      map.onerror = () => {
+        alert('Error: Map data unavailable');
+      };
+    }
+
+    // Vytvoření náhledů map (pouze pokud je více než 1 mapa)
+    function createMapThumbnails() {
+      if (maps.length <= 1) {
+        mapSelector.style.display = 'none';
+        return;
+      }
+      
+      maps.forEach((name, index) => {
+        const option = document.createElement('div');
+        option.className = 'mapOption';
+        
+        const img = document.createElement('img');
+        const obfuscatedPath = obfuscateImagePath(name);
+        img.src = obfuscatedPath;
+        
+        const label = document.createElement('span');
+        const formattedName = name.replace('.png', '').replace(/\d+/g, ' $&').trim();
+        label.textContent = formattedName;
+        
+        option.appendChild(img);
+        option.appendChild(label);
+        
+        option.addEventListener('click', (e) => {
+          e.stopPropagation();
+          loadMap(name);
+          mapSelector.classList.remove('open');
+        });
+        
+        mapSelectorDropdown.appendChild(option);
+        
+        // Set first map as selected initially
+        if (index === 0) {
+          option.classList.add('selected');
+          mapSelectorCurrent.textContent = formattedName;
+        }
+      });
+    }
+
+    // Zvýraznění aktuálně vybrané mapy v náhledech
+    function updateSelectedThumb() {
+      const currentMapName = mapTitle.textContent;
+      const options = mapSelectorDropdown.querySelectorAll('.mapOption');
+      options.forEach(option => {
+        const optionText = option.querySelector('span').textContent;
+        if (optionText === currentMapName) {
+          option.classList.add('selected');
+          mapSelectorCurrent.textContent = optionText;
+        } else {
+          option.classList.remove('selected');
+        }
+      });
+    }
+
+    // Aktualizace transformace (posun a zoom)
+    function updateTransform() {
+      map.style.transform = `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+    }
+
+    // Toggle vysouvacího panelu map
+    mapSelector.addEventListener('click', (e) => {
+      // Don't toggle if clicking on a map option
+      if (!e.target.closest('.mapOption')) {
+        mapSelector.classList.toggle('open');
+      }
+    });
+
+    zoomSlider.addEventListener('input', () => {
+      // Direct slider value since we're not rotating it anymore
+      let sliderValue = parseFloat(zoomSlider.value);
+      let newScale = sliderValue / 100;
+      
+      // Používáme aktuální minimální zoom, ale zajistíme minimálně 10%
+      const effectiveMinZoom = Math.max(10, currentMinZoom);
+      const centeringThreshold = effectiveMinZoom * 1.2; // 20% nad minimem začíná centrování
+      
+      if (newScale <= effectiveMinZoom / 100) {
+        // Nastavíme na "fit to screen" scale
+        const containerRect = container.getBoundingClientRect();
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        const imgWidth = map.naturalWidth;
+        const imgHeight = map.naturalHeight;
+        
+        if (imgWidth > 0 && imgHeight > 0) {
+          const scaleX = containerWidth / imgWidth;
+          const scaleY = containerHeight / imgHeight;
+          const fitScale = Math.min(scaleX, scaleY);
+          // Zajistíme, že scale není příliš malý
+          scale = Math.max(0.1, fitScale);
+        } else {
+          scale = Math.max(0.1, effectiveMinZoom / 100);
+        }
+        pos = { x: 0, y: 0 };
+        centeredAtMinZoom = true;
+      } else if (newScale <= centeringThreshold / 100) {
+        // Postupné centrování mezi threshold a minimem
+        const progress = (centeringThreshold / 100 - newScale) / (centeringThreshold / 100 - effectiveMinZoom / 100);
+        const smoothProgress = Math.min(1, Math.max(0, progress));
+        
+        // Interpolace pozice směrem ke středu
+        pos.x = pos.x * (1 - smoothProgress);
+        pos.y = pos.y * (1 - smoothProgress);
+        
+        if (centeredAtMinZoom) {
+          pos.x = 0;
+          pos.y = 0;
+          centeredAtMinZoom = false;
+        }
+        scale = Math.max(0.1, newScale);
+      } else {
+        if (centeredAtMinZoom) {
+          pos.x = 0;
+          pos.y = 0;
+          centeredAtMinZoom = false;
+        }
+        scale = Math.max(0.1, newScale); // Zajistíme minimálně 10%
+      }
+      
+      updateTransform();
+      updateHUD();
+    });
+
+    container.addEventListener('mousedown', e => {
+      // Allow dragging at all zoom levels
+      // Prevent default to avoid image dragging and right-click menu
+      e.preventDefault();
+      
+      // Only allow left mouse button for dragging
+      if (e.button !== 0) return;
+      
+      isDragging = true;
+      dragStart.x = e.clientX - pos.x;
+      dragStart.y = e.clientY - pos.y;
+      container.style.cursor = 'grabbing';
+      
+      // Prevent text selection while dragging
+      document.body.style.userSelect = 'none';
+    });
+
+    container.addEventListener('mouseup', () => {
+      isDragging = false;
+      container.style.cursor = 'grab';
+      document.body.style.userSelect = '';
+    });
+
+    container.addEventListener('mouseleave', () => {
+      isDragging = false;
+      container.style.cursor = 'grab';
+      document.body.style.userSelect = '';
+    });
+
+    container.addEventListener('mousemove', e => {
+      if (!isDragging) return;
+      
+      // Allow moving at all zoom levels
+      pos.x = e.clientX - dragStart.x;
+      pos.y = e.clientY - dragStart.y;
+      updateTransform();
+      updateHUD();
+    });
+
+    // --- ZOOM KOLEČKEM kolem kurzoru + vycentrování při odzoomu ---
+    container.addEventListener('wheel', e => {
+      e.preventDefault();
+
+      let currentValue = parseFloat(zoomSlider.value);
+      let delta = e.deltaY < 0 ? 8 : -8; // Normal delta since slider is not rotated
+      let newValue = currentValue + delta;
+      let maxSliderValue = parseFloat(zoomSlider.max);
+      let minSliderValue = parseFloat(zoomSlider.min);
+      newValue = Math.min(maxSliderValue, Math.max(minSliderValue, newValue));
+      
+      // Direct slider value since we're not rotating it anymore
+      const newScale = newValue / 100;
+      
+      const containerRect = container.getBoundingClientRect();
+      const cursorX = e.clientX - containerRect.left;
+      const cursorY = e.clientY - containerRect.top;
+      
+      const prevScale = scale;
+      const centeringThreshold = currentMinZoom * 1.2; // 20% nad minimem začíná centrování
+
+      if (newScale <= currentMinZoom / 100) {
+        // Nastavíme na "fit to screen" scale
+        const containerWidth = containerRect.width;
+        const containerHeight = containerRect.height;
+        const imgWidth = map.naturalWidth;
+        const imgHeight = map.naturalHeight;
+        
+        if (imgWidth > 0 && imgHeight > 0) {
+          const scaleX = containerWidth / imgWidth;
+          const scaleY = containerHeight / imgHeight;
+          const fitScale = Math.min(scaleX, scaleY);
+          scale = Math.max(0.1, fitScale); // Zajistíme minimálně 10%
+        } else {
+          scale = Math.max(0.1, currentMinZoom / 100);
+        }
+        pos = { x: 0, y: 0 };
+        centeredAtMinZoom = true;
+      } else if (newScale <= centeringThreshold / 100) {
+        // Postupné centrování mezi threshold a minimem
+        const progress = (centeringThreshold / 100 - newScale) / (centeringThreshold / 100 - currentMinZoom / 100);
+        const smoothProgress = Math.min(1, Math.max(0, progress));
+        
+        // Interpolace pozice směrem ke středu
+        pos.x = pos.x * (1 - smoothProgress);
+        pos.y = pos.y * (1 - smoothProgress);
+        
+        centeredAtMinZoom = false;
+        scale = Math.max(0.1, newScale);
+      } else {
+        // Normální zoom s kurzorem jako pivot point - OPRAVENO
+        // Vypočteme pozici kurzoru relativně k obrázku před zoomem
+        const containerCenterX = containerRect.width / 2;
+        const containerCenterY = containerRect.height / 2;
+        
+        // Relativní pozice kurzoru od středu kontejneru
+        const relativeX = cursorX - containerCenterX;
+        const relativeY = cursorY - containerCenterY;
+        
+        // Pozice kurzoru v souřadnicích obrázku před transformací
+        const imageX = (relativeX - pos.x) / prevScale;
+        const imageY = (relativeY - pos.y) / prevScale;
+        
+        // Nová pozice po změně scale
+        const newImageX = imageX * newScale;
+        const newImageY = imageY * newScale;
+        
+        // Upravíme pozici tak, aby bod pod kurzorem zůstal na místě
+        pos.x = relativeX - newImageX;
+        pos.y = relativeY - newImageY;
+        
+        centeredAtMinZoom = false;
+        scale = Math.max(0.1, newScale);
+      }
+
+      zoomSlider.value = newValue;
+      updateTransform();
+      updateHUD();
+    });
+
+    // Inicializace
+    createMapThumbnails();
+    if (maps.length > 0) {
+      loadMap(maps[0]);
+    } else {
+      mapTitle.textContent = "No missions available";
+    }
+  </script>
+</body>
+</html>
