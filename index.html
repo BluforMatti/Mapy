@@ -461,14 +461,14 @@
     /* POI (Points of Interest) Styling */
     .poi {
       position: absolute;
-      width: 20px;
-      height: 20px;
-      background: red;
-      border: 3px solid yellow;
+      width: 12px;
+      height: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      border: 2px solid #4285f4;
       border-radius: 50%;
       cursor: pointer;
       transition: all 0.2s ease;
-      z-index: 100;
+      z-index: 1000;
       transform: translate(-50%, -50%);
     }
 
@@ -507,6 +507,82 @@
       object-fit: cover;
       border-radius: 4px;
       margin-bottom: 8px;
+    }
+
+    .poi-image-container {
+      position: relative;
+      width: 100%;
+      height: 120px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .poi-slideshow {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .poi-slideshow img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      transition: opacity 0.5s ease-in-out;
+      z-index: 1; /* Ensure images are layered properly */
+    }
+
+    .poi-slideshow img.active {
+      opacity: 1;
+      z-index: 2; /* Active image on top */
+    }
+
+    .poi-slideshow-indicator {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.8);
+      color: rgba(255, 255, 255, 0.9);
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      z-index: 20; /* Make sure indicator is always on top */
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .poi-image-fallback {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.05);
+      border: 2px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .fallback-icon {
+      font-size: 24px;
+      opacity: 0.6;
+    }
+
+    .fallback-text {
+      font-size: 11px;
+      color: #9aa0a6;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     .poi-tooltip h3 {
@@ -779,29 +855,57 @@
     // - description: Popis POI (zobrazí se pod názvem)
     // - x: Pozice X na obrázku v pixelech (měřeno zleva)
     // - y: Pozice Y na obrázku v pixelech (měřeno shora)
-    // - image: Cesta k obrázku POI (zobrazí se v tooltip)
+    // - image: Název obrázku POI (bude načten z POIs/[mapname]/ složky)
     const mapPOIs = {
       'map1.png': [
         {
-          name: 'Test Center',
-          description: 'Test POI in center of map',
-          x: 400, // pozice X na obrázku (v pixelech) - center
-          y: 300, // pozice Y na obrázku (v pixelech) - center
-          image: 'poi1.png' // obrázek POI - musí být ve stejné složce
+          name: 'Construction',
+          description: 'Active construction site with ongoing building operations.',
+          x: 2064, // pozice X na obrázku (v pixelech)
+          y: 3300, // pozice Y na obrázku (v pixelech)
+          image: 'construction1.png' // bude načten z POIs/map1/construction1.png
         },
         {
-          name: 'Hlavní základna',
-          description: 'Velitelské centrum s komunikačním zařízením.',
-          x: 500, // 500px zleva
-          y: 400, // 400px shora
-          image: 'poi1.png' // Using existing image for now
+          name: 'Mall',
+          description: 'Large shopping center.',
+          x: 2130, // pozice X na obrázku (v pixelech)
+          y: 3090, // pozice Y na obrázku (v pixelech)
+          image: 'mall1.png' // bude načten z POIs/map1/mall1.png
         },
         {
-          name: 'Přistávací plocha',
-          description: 'Heliport pro rychlé nasazení a evakuaci.',
-          x: 200, // 200px zleva
-          y: 300, // 300px shora
-          image: 'poi1.png' // Using existing image for now
+          name: 'Checkpoint',
+          description: 'Security checkpoint and patrol station.',
+          x: 2110, // pozice X na obrázku (v pixelech)
+          y: 2160, // pozice Y na obrázku (v pixelech)
+          image: 'checkpoint1.png' // bude načten z POIs/map1/checkpoint1.png
+        },
+        {
+          name: 'Village',
+          description: 'Residential village settlement with local community.',
+          x: 3000, // pozice X na obrázku (v pixelech)
+          y: 3333, // pozice Y na obrázku (v pixelech)
+          image: 'village1.png' // bude načten z POIs/map1/village1.png
+        },
+        {
+          name: 'Base',
+          description: 'Military base and command center facility.',
+          x: 2500, // pozice X na obrázku (v pixelech)
+          y: 5555, // pozice Y na obrázku (v pixelech)
+          image: 'base1.png' // bude načten z POIs/map1/base1.png
+        },
+        {
+          name: 'House',
+          description: 'Residential building in middle of nowhere.',
+          x: 2190, // pozice X na obrázku (v pixelech)
+          y: 4200, // pozice Y na obrázku (v pixelech)
+          image: 'house2.png' // bude načten z POIs/map1/house2.png
+        },
+        {
+          name: 'Garage',
+          description: 'Vehicle maintenance and parking facility.',
+          x: 2727, // pozice X na obrázku (v pixelech)
+          y: 3315, // pozice Y na obrázku (v pixelech)
+          image: 'garage1.png' // bude načten z POIs/map1/garage1.png
         }
         // Pro přidání dalšího POI zkopírujte jeden z objektů výše
         // a změňte jeho hodnoty (nezapomeňte na čárku mezi objekty)
@@ -811,6 +915,13 @@
       //   { name: 'POI název', description: 'popis', x: 100, y: 200, image: 'obr.jpg' }
       // ],
     };
+
+    // Function to get POI image path based on map name
+    function getPOIImagePath(mapName, imageName) {
+      // Remove .png extension from map name to get folder name
+      const mapFolder = mapName.replace('.png', '');
+      return `POIs/${mapFolder}/${imageName}`;
+    }
 
     // HUD elementy
     const coordinatesDisplay = document.getElementById('coordinates');
@@ -850,21 +961,76 @@
 
     // Funkce pro vytvoření jednoho POI bodu na mapě
     // poiData: objekt s daty POI (name, description, x, y, image)
+    // mapName: název mapy pro určení správné složky
     // Vrací: DOM element POI bodu
-    function createPOI(poiData) {
+    function createPOI(poiData, mapName) {
+      console.log('=== Creating POI ===');
+      console.log('POI data:', poiData);
+      console.log('Map name:', mapName);
+      
       // Vytvoření DOM elementu pro POI bod (bílá tečka s modrým okrajem)
       const poi = document.createElement('div');
       poi.className = 'poi';
-      // Nastavíme pozici POI přímo na mapě
-      poi.style.left = poiData.x + 'px';
-      poi.style.top = poiData.y + 'px';
+      
+      // Calculate POI position relative to container center and current map transform
+      const containerRect = container.getBoundingClientRect();
+      const containerCenterX = containerRect.width / 2;
+      const containerCenterY = containerRect.height / 2;
+      
+      // Convert POI coordinates from image space to container space
+      const poiX = containerCenterX + (poiData.x - map.naturalWidth / 2) * scale + pos.x;
+      const poiY = containerCenterY + (poiData.y - map.naturalHeight / 2) * scale + pos.y;
+      
+      // Nastavíme pozici POI relativně ke kontejneru
+      poi.style.left = poiX + 'px';
+      poi.style.top = poiY + 'px';
+      
+      console.log('POI element created with calculated position:', poi.style.left, poi.style.top);
+      console.log('Container center:', containerCenterX, containerCenterY);
+      console.log('Map scale:', scale, 'Map position:', pos.x, pos.y);
+      console.log('POI element classes:', poi.className);
+      console.log('POI element style:', poi.style.cssText);
       
       // Vytvoření tooltip elementu (popup s informacemi o POI)
       const tooltip = document.createElement('div');
       tooltip.className = 'poi-tooltip';
-      // Naplnění tooltip obsahem (obrázek, název, popis)
-      tooltip.innerHTML = `
-        <img src="${poiData.image}" alt="${poiData.name}" onerror="this.style.display='none';">
+      
+      // Create image container with fallback support
+      const imageContainer = document.createElement('div');
+      imageContainer.className = 'poi-image-container';
+      
+      // Create a simple image element
+      const img = document.createElement('img');
+      const imagePath = getPOIImagePath(mapName, poiData.image);
+      img.src = imagePath;
+      img.alt = poiData.name;
+      
+      // Create fallback element
+      const fallback = document.createElement('div');
+      fallback.className = 'poi-image-fallback';
+      fallback.innerHTML = `
+        <div class="fallback-icon">📷</div>
+        <div class="fallback-text">Image unavailable</div>
+      `;
+      fallback.style.display = 'none';
+      
+      // Handle image loading
+      img.onload = () => {
+        fallback.style.display = 'none';
+        img.style.display = 'block';
+      };
+      
+      img.onerror = () => {
+        img.style.display = 'none';
+        fallback.style.display = 'flex';
+      };
+      
+      imageContainer.appendChild(img);
+      imageContainer.appendChild(fallback);
+      
+      // Naplnění tooltip obsahem (obrázek s fallback, název, popis)
+      tooltip.appendChild(imageContainer);
+      tooltip.innerHTML += `
         <h3>${poiData.name}</h3>
         <p>${poiData.description}</p>
       `;
@@ -907,7 +1073,9 @@
         // Nastavíme pozici tooltip
         updateTooltipPosition(e);
         // Zobrazíme tooltip s malým zpožděním pro plynulou animaci
-        setTimeout(() => tooltip.classList.add('visible'), 10);
+        setTimeout(() => {
+          tooltip.classList.add('visible');
+        }, 10);
         // Uložíme referenci na aktivní tooltip
         activeTooltip = tooltip;
       });
@@ -932,12 +1100,21 @@
       });
       
       // Vrátíme vytvořený POI element
+      console.log('POI element ready to return:', poi);
+      console.log('POI final computed style:', window.getComputedStyle ? 'will check after DOM insertion' : 'getComputedStyle not available');
       return poi;
     }
 
     // Funkce pro načtení a zobrazení všech POI pro danou mapu
     // mapName: název souboru mapy (např. 'map1.png')
     function loadPOIs(mapName) {
+      console.log('=== loadPOIs called ===');
+      console.log('Map name:', mapName);
+      console.log('Map element:', map);
+      console.log('Map element parent:', map.parentElement);
+      console.log('Map element dimensions:', map.offsetWidth, 'x', map.offsetHeight);
+      console.log('Map natural dimensions:', map.naturalWidth, 'x', map.naturalHeight);
+      
       // Odstranění všech aktuálně zobrazených POI z mapy
       currentPOIs.forEach(poi => poi.remove());
       currentPOIs = []; // Vyprázdnění pole
@@ -953,17 +1130,54 @@
       
       console.log('Loading POIs for map:', mapName);
       console.log('Found POIs:', pois.length);
+      console.log('POI data:', pois);
       
       // Vytvoření a přidání každého POI na mapu
       pois.forEach((poiData, index) => {
         console.log('Creating POI', index, poiData);
-        const poi = createPOI(poiData); // Vytvoření POI elementu
-        map.appendChild(poi); // Přidání POI na mapu
+        const poi = createPOI(poiData, mapName); // Pass mapName to createPOI
+        console.log('POI created, about to append to container instead of map:', poi);
+        
+        // IMPORTANT: Add POI to container instead of map for better visibility
+        container.appendChild(poi); // Changed from map.appendChild to container.appendChild
+        console.log('POI appended to container');
+        console.log('POI parent after append:', poi.parentElement);
+        console.log('POI position in DOM:', poi.style.left, poi.style.top);
+        console.log('POI computed style:', window.getComputedStyle(poi));
+        
         currentPOIs.push(poi); // Uložení reference pro pozdější odstranění
-        console.log('POI created and added to map:', poi);
+        console.log('POI created and added to container:', poi);
       });
       
       console.log('Total POIs created:', currentPOIs.length);
+      console.log('Map children count:', map.children.length);
+      console.log('Map children:', Array.from(map.children));
+    }
+
+    // Funkce pro aktualizaci pozic POI při změně mapy (zoom/pan)
+    function updatePOIPositions() {
+      if (currentPOIs.length === 0) return;
+      
+      const containerRect = container.getBoundingClientRect();
+      const containerCenterX = containerRect.width / 2;
+      const containerCenterY = containerRect.height / 2;
+      
+      // Get current map name to find POI data
+      const currentMapName = maps[0]; // assuming map1.png for now
+      const pois = mapPOIs[currentMapName] || [];
+      
+      currentPOIs.forEach((poiElement, index) => {
+        if (index < pois.length) {
+          const poiData = pois[index];
+          
+          // Convert POI coordinates from image space to container space
+          const poiX = containerCenterX + (poiData.x - map.naturalWidth / 2) * scale + pos.x;
+          const poiY = containerCenterY + (poiData.y - map.naturalHeight / 2) * scale + pos.y;
+          
+          poiElement.style.left = poiX + 'px';
+          poiElement.style.top = poiY + 'px';
+        }
+      });
     }
 
     // Funkce pro aktualizaci HUD
@@ -972,6 +1186,7 @@
       const y = Math.round(pos.y);
       const zoomPercent = Math.round(scale * 100);
       
+      // Default coordinates display (map position)
       coordinatesDisplay.textContent = `${x}, ${y}`;
       zoomLevelDisplay.textContent = `${zoomPercent}%`;
       
@@ -982,6 +1197,30 @@
       } else {
         statusDisplay.textContent = 'Active';
       }
+    }
+
+    // Function to update cursor coordinates in HUD
+    function updateCursorCoordinates(e) {
+      const containerRect = container.getBoundingClientRect();
+      const containerCenterX = containerRect.width / 2;
+      const containerCenterY = containerRect.height / 2;
+      
+      // Get cursor position relative to container
+      const cursorX = e.clientX - containerRect.left;
+      const cursorY = e.clientY - containerRect.top;
+      
+      // Convert cursor position to map image coordinates
+      const relativeX = cursorX - containerCenterX;
+      const relativeY = cursorY - containerCenterY;
+      
+      // Calculate position on the actual map image
+      const imageX = (relativeX - pos.x) / scale + map.naturalWidth / 2;
+      const imageY = (relativeY - pos.y) / scale + map.naturalHeight / 2;
+      
+      // Update the coordinates display with cursor position
+      const roundedX = Math.round(imageX);
+      const roundedY = Math.round(imageY);
+      coordinatesDisplay.textContent = `${roundedX}, ${roundedY}`;
     }
 
     function calculateInitialScaleAndPosition() {
@@ -1129,6 +1368,7 @@
     // Aktualizace transformace (posun a zoom)
     function updateTransform() {
       map.style.transform = `translate(-50%, -50%) translate(${pos.x}px, ${pos.y}px) scale(${scale})`;
+      updatePOIPositions(); // Update POI positions when map transforms
     }
 
     // Toggle vysouvacího panelu map
@@ -1225,6 +1465,9 @@
     });
 
     container.addEventListener('mousemove', e => {
+      // Update cursor coordinates in HUD
+      updateCursorCoordinates(e);
+      
       if (!isDragging) return;
       
       // Allow moving at all zoom levels
@@ -1321,6 +1564,45 @@
     } else {
       mapTitle.textContent = "No missions available";
     }
+
+    // DEBUG: Function to manually test POI creation
+    window.testPOI = function() {
+      console.log('=== MANUAL POI TEST ===');
+      const testPoi = document.createElement('div');
+      testPoi.style.position = 'absolute';
+      testPoi.style.left = '50%';
+      testPoi.style.top = '50%';
+      testPoi.style.width = '50px';
+      testPoi.style.height = '50px';
+      testPoi.style.backgroundColor = 'red';
+      testPoi.style.border = '5px solid yellow';
+      testPoi.style.borderRadius = '50%';
+      testPoi.style.zIndex = '9999';
+      testPoi.textContent = 'TEST';
+      testPoi.style.color = 'white';
+      testPoi.style.textAlign = 'center';
+      testPoi.style.lineHeight = '40px';
+      testPoi.style.transform = 'translate(-50%, -50%)';
+      
+      container.appendChild(testPoi); // Changed to container
+      console.log('Manual test POI added to container:', testPoi);
+      console.log('Test POI parent:', testPoi.parentElement);
+      return testPoi;
+    };
+
+    // DEBUG: Function to check current state
+    window.debugPOIs = function() {
+      console.log('=== POI DEBUG STATE ===');
+      console.log('currentPOIs array:', currentPOIs);
+      console.log('Map element:', map);
+      console.log('Map children:', Array.from(map.children));
+      console.log('Map POI data:', mapPOIs);
+      console.log('Available maps:', maps);
+      
+      // Try to manually trigger POI loading
+      console.log('Manually triggering loadPOIs...');
+      loadPOIs('map1.png');
+    };
   </script>
 </body>
 </html>
