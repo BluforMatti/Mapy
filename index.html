@@ -8,8 +8,6 @@
                     INTELLIGENCE MAP VIEWER - PŘEHLED
   ===================================================================
   
-  Toto je profesionální prohlížeč map s taktickým HUD stylem.
-  
   RYCHLÝ NÁVOD PRO ÚPRAVY:
   -------------------------
   
@@ -29,12 +27,7 @@
      - Řádek ~365: Upravte URL pozvánky na Discord
      - Řádky 275-320: Styling a velikost kontejneru loga
   
-  ☕ KO-FI:
-     - Řádek ~364: Změňte 'https://ko-fi.com/yourusername' na váš Ko-fi odkaz
-     - Řádek ~363: Změňte 'kofi-icon.png' na váš Ko-fi obrázek
-     - Řádky 285-315: Styling Ko-fi tlačítka v HUD
-  
-  📍 POI (BODY ZÁJMU):
+  📍 POI:
      - Řádek ~470: Upravte objekty 'mapPOIs' pro přidání/odebrání POI
      - Každý POI má: název, popis, souřadnice (x, y), obrázek
      - POI se zobrazují jako bílé tečky s hover efektem
@@ -54,11 +47,7 @@
   🎯 NÁZEV MAPY:
      - Řádek 430: Logika formátování názvu mapy
      - Aktuálně automaticky odebírá čísla a příponu .png
-  
-  📱 RESPONZIVNÍ:
-     - Většina prvků používá fixní pozicování pro taktický HUD pocit
-     - Kontejner se automaticky přizpůsobuje výšce viewportu
-  
+
   HLAVNÍ SEKCE:
   -------------
   1. Řádky 8-320:   CSS Styling (barvy, layout, HUD, logo)
@@ -794,8 +783,8 @@
     const mapPOIs = {
       'map1.png': [
         {
-          name: 'Východní věž',
-          description: 'Strategická pozorovací věž s výhledem na celé údolí.',
+          name: 'Test',
+          description: 'Test',
           x: 300, // pozice X na obrázku (v pixelech) - 300px zleva
           y: 150, // pozice Y na obrázku (v pixelech) - 150px shora
           image: 'poi1.jpg' // obrázek POI - musí být ve stejné složce
@@ -866,7 +855,7 @@
       // Vytvoření DOM elementu pro POI bod (bílá tečka s modrým okrajem)
       const poi = document.createElement('div');
       poi.className = 'poi';
-      // Nastavení pozice POI na mapě (pozice jsou v pixelech relativně k obrázku)
+      // Nastavíme pozici POI přímo na mapě
       poi.style.left = poiData.x + 'px';
       poi.style.top = poiData.y + 'px';
       
@@ -965,7 +954,7 @@
       // Vytvoření a přidání každého POI na mapu
       pois.forEach(poiData => {
         const poi = createPOI(poiData); // Vytvoření POI elementu
-        map.appendChild(poi); // Přidání POI do mapy (jako dítě img elementu)
+        map.appendChild(poi); // Přidání POI přímo na mapu
         currentPOIs.push(poi); // Uložení reference pro pozdější odstranění
       });
     }
